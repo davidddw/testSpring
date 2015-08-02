@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+  xmlns:tx="http://www.springframework.org/schema/tx" xmlns:aop="http://www.springframework.org/schema/aop"
+  xmlns:task="http://www.springframework.org/schema/task" xmlns:util="http://www.springframework.org/schema/util"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans 
+                           http://www.springframework.org/schema/beans/spring-beans.xsd
+                           http://www.springframework.org/schema/context
+ 						   http://www.springframework.org/schema/context/spring-context.xsd
+ 						   http://www.springframework.org/schema/tx
+       					   http://www.springframework.org/schema/tx/spring-tx.xsd
+       					   http://www.springframework.org/schema/aop
+      					   http://www.springframework.org/schema/aop/spring-aop.xsd
+      					   http://www.springframework.org/schema/task
+      					   http://www.springframework.org/schema/task/spring-task.xsd  
+      					   http://www.springframework.org/schema/util 
+      					   http://www.springframework.org/schema/util/spring-util.xsd">
+
+  <context:property-placeholder location="classpath:jdbc.properties" />
+
+  <!-- 配置数据源 -->
+  <bean id="dataSource" class="com.jolbox.bonecp.BoneCPDataSource"
+    destroy-method="close">
+    <!-- 数据库驱动 -->
+    <property name="driverClass" value="${jdbc.driverClassName}" />
+    <!-- 相应驱动的jdbcUrl -->
+    <property name="jdbcUrl" value="${jdbc.url}" />
+    <!-- 数据库的用户名 -->
+    <property name="username" value="${jdbc.username}" />
+    <!-- 数据库的密码 -->
+    <property name="password" value="${jdbc.password}" />
+    <!-- 检查数据库连接池中空闲连接的间隔时间，单位是分，默认值：240，如果要取消则设置为0 -->
+    <property name="idleConnectionTestPeriodInMinutes"
+      value="${BoneCP.idleConnectionTestPeriodInMinutes}" />
+    <!-- 连接池中未使用的链接最大存活时间，单位是分，默认值：60，如果要永远存活设置为0 -->
+    <property name="idleMaxAgeInMinutes" value="${BoneCP.idleMaxAgeInMinutes}" />
+    <!-- 每个分区最大的连接数 -->
+    <property name="maxConnectionsPerPartition" value="${BoneCP.maxConnectionsPerPartition}" />
+    <!-- 每个分区最小的连接数 -->
+    <property name="minConnectionsPerPartition" value="${BoneCP.minConnectionsPerPartition}" />
+    <!-- 分区数 ，默认值2，最小1，推荐3-4，视应用而定 -->
+    <property name="partitionCount" value="${BoneCP.partitionCount}" />
+    <!-- 每次去拿数据库连接的时候一次性要拿几个,默认值：2 -->
+    <property name="acquireIncrement" value="${BoneCP.acquireIncrement}" />
+    <!-- 缓存prepared statements的大小，默认值：0 -->
+    <property name="statementsCacheSize" value="${BoneCP.statementsCacheSize}" />
+  </bean>
+  
+  <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+    <property name="dataSource" ref="dataSource" />
+  </bean>
+  <tx:annotation-driven transaction-manager="txManager"/>
+
+  <!-- 配置DAO -->
+  <bean id="pollDao" class="com.yunshan.testSpring.dao.impl.PollDaoImpl">
+    <property name="dataSource" ref="dataSource" />
+  </bean>
+</beans>
