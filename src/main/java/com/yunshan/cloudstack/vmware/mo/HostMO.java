@@ -117,7 +117,6 @@ public class HostMO extends BaseMO implements VmwareHypervisorHost {
 					return spec;
 			}
 		}
-
 		return null;
 	}
 

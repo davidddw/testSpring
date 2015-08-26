@@ -3,6 +3,7 @@
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
   xmlns:tx="http://www.springframework.org/schema/tx" xmlns:aop="http://www.springframework.org/schema/aop"
   xmlns:task="http://www.springframework.org/schema/task" xmlns:util="http://www.springframework.org/schema/util"
+  xmlns:rabbit="http://www.springframework.org/schema/rabbit"
   xsi:schemaLocation="http://www.springframework.org/schema/beans 
                            http://www.springframework.org/schema/beans/spring-beans.xsd
                            http://www.springframework.org/schema/context
@@ -14,7 +15,9 @@
       					   http://www.springframework.org/schema/task
       					   http://www.springframework.org/schema/task/spring-task.xsd  
       					   http://www.springframework.org/schema/util 
-      					   http://www.springframework.org/schema/util/spring-util.xsd">
+      					   http://www.springframework.org/schema/util/spring-util.xsd
+                           http://www.springframework.org/schema/rabbit
+                           http://www.springframework.org/schema/rabbit/spring-rabbit.xsd">
 
   <context:property-placeholder location="classpath:jdbc.properties" />
 
@@ -45,14 +48,65 @@
     <!-- 缓存prepared statements的大小，默认值：0 -->
     <property name="statementsCacheSize" value="${BoneCP.statementsCacheSize}" />
   </bean>
-  
-  <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+
+  <bean id="txManager"
+    class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
     <property name="dataSource" ref="dataSource" />
   </bean>
-  <tx:annotation-driven transaction-manager="txManager"/>
+  <tx:annotation-driven transaction-manager="txManager" />
 
   <!-- 配置DAO -->
   <bean id="pollDao" class="com.yunshan.testSpring.dao.impl.PollDaoImpl">
     <property name="dataSource" ref="dataSource" />
   </bean>
+
+  <!-- 连接服务配置 -->
+  <rabbit:connection-factory id="connectionFactory"
+    host="localhost" username="guest" password="guest" port="5672" />
+
+  <rabbit:admin connection-factory="connectionFactory" />
+
+  <!-- queue 队列声明 -->
+  <rabbit:queue id="queue_one" durable="true" auto-delete="false"
+    exclusive="false" name="queue_one" />
+
+  <!-- exchange queue binging key 绑定 -->
+  <rabbit:direct-exchange name="my-mq-exchange"
+    durable="true" auto-delete="false" id="my-mq-exchange">
+    <rabbit:bindings>
+      <rabbit:binding queue="queue_one" key="queue_one_key" />
+    </rabbit:bindings>
+  </rabbit:direct-exchange>
+
+  <!-- spring amqp默认的是jackson的一个插件,目的将生产者生产的数据转换为json存入消息队列， 由于fastjson的速度快于jackson,这里替换为fastjson的一个实现 -->
+  <bean id="jsonMessageConverter" class="com.yunshan.rabbitmq.demo.Gson2JsonMessageConverter"></bean>
+
+  <!-- spring template声明 -->
+  <rabbit:template exchange="my-mq-exchange" id="amqpTemplate"
+    connection-factory="connectionFactory" message-converter="jsonMessageConverter" />
+
+  <rabbit:connection-factory id="connectionFactory" />
+
+  <rabbit:template id="amqpTemplate" connection-factory="connectionFactory"
+    exchange="myExchange" routing-key="foo.bar" />
+
+  <rabbit:admin connection-factory="connectionFactory" />
+
+  <rabbit:queue name="myQueue" />
+
+  <rabbit:topic-exchange name="myExchange">
+    <rabbit:bindings>
+      <rabbit:binding queue="myQueue" pattern="foo.*" />
+    </rabbit:bindings>
+  </rabbit:topic-exchange>
+
+
+  <rabbit:listener-container
+    connection-factory="connectionFactory">
+    <rabbit:listener ref="foo" method="listen"
+      queue-names="myQueue" />
+  </rabbit:listener-container>
+
+  <bean id="foo" class="foo.Foo" />
+
 </beans>
